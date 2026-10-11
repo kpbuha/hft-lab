@@ -8,6 +8,9 @@ add_executable(book_tests
     tests/order_book_test.cpp
 )
 
+add_executable(book_bench bench/book_bench.cpp)
+target_link_libraries(book_bench PRIVATE book bench)
+
 target_link_libraries(book_tests
     PRIVATE
         book

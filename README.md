@@ -48,8 +48,9 @@ hard to actually get right.
 - **`net/`** *(planned)* — UDP multicast and TCP transport, plus lock-free
   SPSC ring buffers and a seqlock for handing data between threads without
   ever blocking the matching engine's single hot thread.
-- **`bench/`** *(planned)* — `rdtsc`-based nanosecond timing and HDR
-  histogram percentile reporting (p50/p99/p99.9), used to measure every
+- **`bench/`** — nanosecond timing (`rdtscp` on x86, the `cntvct_el0`
+  counter on ARM64) calibrated against wall-clock time, plus a log-scale
+  histogram for percentile reporting (p50/p99/p99.9), used to measure every
   stage above.
 
 ## Design notes
@@ -73,11 +74,35 @@ hard to actually get right.
 | Module | Status |
 |---|---|
 | `book/` | Baseline implementation complete: add, cancel, matching (full/partial fill, multi-level sweep), price-time priority. 7/7 unit tests passing. |
-| `book/` — optimized variants (flat array, intrusive lists) | Planned |
-| `bench/` | Planned |
+| `bench/` | `Clock`/`readCycles` timing + `Histogram` percentiles implemented. 3/3 unit tests passing. |
+| `book/` — baseline benchmark | Done — see [Benchmarks](#benchmarks) below. |
+| `book/` — optimized variants (flat array, intrusive lists) | Planned next |
 | `itch/` | Planned |
 | `fix/` | Planned |
 | `net/` | Planned |
+
+## Benchmarks
+
+Baseline `book/` (`std::map` + `std::list`), 1,000,000 operations, ~90%
+cancel-heavy synthetic order flow, warmed up for 5,000 ops before measuring.
+Run on an Apple Silicon (ARM64) laptop — unpinned threads, no isolated
+cores, so tail latency includes OS scheduling noise; p50/p99/p99.9 are the
+numbers that matter here, `max` is expected to be noisy until a later
+phase adds thread pinning and core isolation.
+
+```
+add()      p50=   128 ns   p99=   512 ns   p99.9=   512 ns   max= 15263 ns   n=503656
+cancel()   p50=   128 ns   p99=   256 ns   p99.9=   512 ns   max= 30258 ns   n=496344
+```
+
+Reproduce with:
+
+```bash
+./build/book/book_bench
+```
+
+This is the baseline the flat-array and intrusive-list `book/` variants
+will be compared against once they exist.
 
 ## Building
 
